@@ -1,0 +1,7 @@
+# 把本插件挂进 profile 的插件树。
+#
+# 注意：这里**只**声明本插件自己。不要动 `llm-workbuddy`
+# （那是 dsh-workbuddy-connect 的节点），也不改默认模型。
+- insert:
+    - id: workbuddy-weblogin
+      name: dsh-workbuddy-weblogin

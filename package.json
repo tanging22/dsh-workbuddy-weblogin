@@ -1,0 +1,45 @@
+{
+  "name": "dsh-workbuddy-weblogin",
+  "version": "0.1.0",
+  "description": "为 dsh-workbuddy-connect 提供网页端登录入口；不安装 WorkBuddy 桌面 App 也能用。",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": [
+        "./cordis.patch.yml"
+      ]
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "platform": "web"
+    }
+  },
+  "engines": {
+    "node": ">=18",
+    "dsh": ">=0.2.0-rc.1 <0.3.0"
+  },
+  "scripts": {
+    "test": "node --import ./selfcheck/loader.mjs selfcheck.mjs"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "workbuddy",
+    "login"
+  ]
+}
