@@ -43,10 +43,19 @@ GET  {base}/v2/plugin/login/account?state=<state> + Bearer      -> {uid, enterpr
 ## 安装
 
 ```bash
-dsh plugin add ./dsh-workbuddy-weblogin
+# 本地路径（本机开发）
+dsh plugin --profile web add /path/to/dsh-workbuddy-weblogin
+
+# 从 GitHub（NAS / 另一台机器）
+git clone https://github.com/tanging22/dsh-workbuddy-weblogin /volume1/dsh/plugins/dsh-workbuddy-weblogin
+dsh plugin --profile web add /volume1/dsh/plugins/dsh-workbuddy-weblogin
+
 # 若核心版本校验拦下：
-dsh plugin allow-version dsh-workbuddy-weblogin
+dsh plugin --profile web allow-version dsh-workbuddy-weblogin
 ```
+
+> `dsh plugin add <github url>` 直接装 git spec 也行，但私有仓库要给 pnpm 备好凭据，
+> 而且装完是 pnpm 的 git checkout、不是工作副本。先 `git clone` 再按本地路径装更好排查。
 
 装完后重启宿主，在**设置 → WorkBuddy 登录** 页面里点「开始登录」。页面顶部两个按钮切换国际版 / 国内版。
 
@@ -142,8 +151,14 @@ dsh web --profile web --host 0.0.0.0 --trusted-host nas.local --no-open
 `dsh plugin add <路径>` 用的是 `link:` 协议，要求插件目录**原地不动**。别 link 到 Windows 的 UNC 共享路径（`\\NAS\...`），建议先把插件目录拷进 NAS 的稳定路径再装：
 
 ```bash
-cp -r ./dsh-workbuddy-weblogin /volume1/dsh/plugins/
+git clone https://github.com/tanging22/dsh-workbuddy-weblogin /volume1/dsh/plugins/dsh-workbuddy-weblogin
 dsh plugin --profile web add /volume1/dsh/plugins/dsh-workbuddy-weblogin
+```
+
+装完跑一次自检（在 NAS 上也能跑，13 条里有几条会因为找不到 `dsh-workbuddy-connect` 自动跳过）：
+
+```bash
+cd /volume1/dsh/plugins/dsh-workbuddy-weblogin && npm test
 ```
 
 ## 已知边界
