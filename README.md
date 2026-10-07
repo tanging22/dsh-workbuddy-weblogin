@@ -142,6 +142,46 @@ dsh web --profile web --host 0.0.0.0 --trusted-host nas.local --no-open
 
 凭据写进 `$DSH_HOME/.workbuddy[-ai]-auth.json`，而 `dsh-workbuddy-connect` 读的是**同一个** `resolveDshHome()`（`$DSH_HOME` > `~/.dsh`）。只要两者跑在同一个环境里就不会错；如果登录时和 `dsh-workbuddy-connect` 启动时 `DSH_HOME` 不一样，就会出现「显示已登录但插件说没登录」。
 
+### 4. 登录成功后，最多要等 30 秒才生效
+
+⚠️ **这不是没成功**。本插件写完凭据文件就完事了，但 `dsh-workbuddy-connect` 是靠**定时扫描**发现凭据的：
+
+```js
+const CREDENTIAL_POLL_MS = 3e4                 // lib/index.js:1825
+setInterval(() => { syncAll() }, credentialPollMs())   // lib/index.js:2432-2434
+```
+
+每 30 秒扫一次两个变体的凭据文件（纯本地读取，不联网、不跑探针），扫到才把模型组挂上去。所以点完登录 → 等最多 30 秒 → 模型和余额才出现。
+
+想让它快一点，可以用这个隐藏开关（`lib/index.js:1819-1834`，夹在 100…86400000）：
+
+```bash
+DSH_WORKBUDDY_POLL_MS=3000 dsh web --profile web --host 0.0.0.0 --no-open
+```
+
+注释里明说这是给测试和排查用的，**不是产品设置**，UI 也不暴露，日常别长期开。
+
+**怎么自己判断到底是"在等"还是"真坏了"：**
+
+```bash
+# 本插件视角：文件写没写、写在哪、有没有被桌面文件压过
+curl 'http://127.0.0.1:3080/api/wb-login/status?variant=ai'
+
+# 0.7.1 视角：读没读到
+curl 'http://127.0.0.1:3080/plugins/dsh-workbuddy-connect/ai/status'
+```
+
+| 本插件 `own.present` | 0.7.1 `status` | 结论 |
+| --- | --- | --- |
+| `true` | `signed-out` | 正常，**等 30 秒**再查 |
+| `true` | `signed-out`（超过 1 分钟还这样） | 真有问题，看下面两条 |
+| `false` | 任意 | 登录没成功，重登一次 |
+
+真坏了的话，先查这两处：
+
+1. **`DSH_HOME` 不一致** —— 上面那条 `status` 会返回 `dshHome` 和 `ownPath`，对着 0.7.1 实际读的路径看一眼（用 systemd / docker 起宿主时，环境变量容易在别处被覆盖）。
+2. **变体搞混了** —— 登录的是国际版 `ai` 还是国内版 `cn`，两个都查一遍：`?variant=ai` / `?variant=cn`。
+
 ### Linux 上的额外好处
 
 桌面凭据候选在 Linux 是 `~/.config` / `~/.local/share` 下的 `CodeBuddyExtension/Data/Public/auth/workbuddy-desktop[-ai].info`——NAS 上基本不存在，所以 `readDesktop()` 走 ENOENT 返回 `undefined`，**own 副本独立生效，不会被 outrank**。这比在 Windows 上（装了桌面 App 时）更干净。
